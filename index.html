@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <title>जंगल का फर्श · realistic nature fun</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      user-select: none; /* avoid accidental text selection */
+    }
+
+    body {
+      margin: 0;
+      height: 100vh;
+      width: 100vw;
+      overflow: hidden;
+      background: #1d3b1a; /* deep forest edge */
+      font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+    }
+
+    /* main scrollable world — like a tiny jungle */
+    .world {
+      width: 2200px;
+      height: 2200px;
+      position: relative;
+      overflow: scroll;
+      background-color: #3a2e1f;
+      background-image: 
+        radial-gradient(circle at 10px 10px, #5e4b33 2px, transparent 2px),
+        radial-gradient(circle at 30px 25px, #4f3f2c 1px, transparent 2px);
+      background-size: 60px 60px, 120px 120px;
+      box-shadow: inset 0 0 40px #1e2b0e;
+      cursor: grab;
+      scroll-behavior: smooth;
+    }
+
+    /* ---- nature elements ---- */
+    .grass-blade {
+      position: absolute;
+      width: 5px;
+      height: 24px;
+      background: linear-gradient(45deg, #2b7a2b, #3fa63f, #1c5a1c);
+      border-radius: 40% 40% 10% 10%;
+      transform-origin: bottom center;
+      box-shadow: -1px 0 3px #0f3f0f;
+      z-index: 2;
+      pointer-events: none; /* so clicks pass through to insects */
+    }
+
+    .stone {
+      position: absolute;
+      background: #6b5a4b;
+      border-radius: 60% 40% 50% 30%;
+      filter: drop-shadow(2px 4px 5px rgba(0,0,0,0.5));
+      box-shadow: inset -2px -2px 5px #3e3327, inset 2px 2px 5px #a58e74;
+      z-index: 3;
+      pointer-events: none;
+    }
+
+    .leaf {
+      position: absolute;
+      background: #8b5e3c;
+      width: 26px;
+      height: 20px;
+      border-radius: 80% 10% 80% 10%;
+      transform: rotate(30deg);
+      opacity: 0.9;
+      box-shadow: -2px 3px 6px #2d251c;
+      background: radial-gradient(circle at 30% 40%, #b78f5a, #6d4f2b);
+      z-index: 4;
+      pointer-events: none;
+    }
+
+    /* water puddle – semi‑transparent and wobbly */
+    .water {
+      position: absolute;
+      background: radial-gradient(circle at 30% 40%, rgba(100, 200, 255, 0.45), rgba(20, 100, 200, 0.3));
+      border-radius: 70% 30% 60% 40%;
+      filter: blur(5px) drop-shadow(0 0 3px #5cf);
+      backdrop-filter: blur(1px);
+      box-shadow: inset 0 0 20px #9df, 0 8px 15px #1f3a4b;
+      z-index: 5;
+      pointer-events: visible; /* we want touch on water */
+      transition: filter 0.2s;
+    }
+
+    .water.ripple {
+      animation: waterShake 0.5s ease-out;
+    }
+
+    @keyframes waterShake {
+      0% { transform: scale(1) skew(0deg); filter: blur(5px) brightness(1); }
+      30% { transform: scale(1.04) skew(1deg, 0.5deg); filter: blur(7px) brightness(1.1); }
+      70% { transform: scale(0.98) skew(-0.5deg, -0.2deg); filter: blur(5px) brightness(0.95); }
+      100% { transform: scale(1) skew(0deg); filter: blur(5px) brightness(1); }
+    }
+
+    /* holes near earthworms (gaming se thore nikalna) */
+    .worm-hole {
+      position: absolute;
+      width: 32px;
+      height: 16px;
+      background: #2e241a;
+      border-radius: 50%;
+      box-shadow: inset 0 4px 6px #0f0b07, 0 2px 3px black;
+      z-index: 6;
+      pointer-events: none;
+    }
+
+    /* insects – all clickable and lively */
+    .insect {
+      position: absolute;
+      font-size: 44px;
+      line-height: 1;
+      cursor: pointer;
+      filter: drop-shadow(2px 6px 5px #121212);
+      transition: transform 0.15s, filter 0.2s;
+      z-index: 20;
+      text-shadow: 0 2px 6px #260;
+      pointer-events: auto;
+      transform-origin: center;
+      white-space: nowrap;
+    }
+
+    /* fly default */
+    .fly {
+      /* just emoji */
+    }
+
+    /* angry ant */
+    .ant.angry {
+      filter: drop-shadow(0 0 12px red) hue-rotate(-20deg) brightness(1.3);
+      transform: scale(1.35);
+      animation: antShake 0.18s infinite;
+    }
+
+    @keyframes antShake {
+      0% { transform: translate(0px, 0px) scale(1.35); }
+      20% { transform: translate(3px, -2px) scale(1.38); }
+      40% { transform: translate(-3px, 2px) scale(1.32); }
+      60% { transform: translate(2px, 2px) scale(1.37); }
+      80% { transform: translate(-2px, -1px) scale(1.33); }
+      100% { transform: translate(0px, 0px) scale(1.35); }
+    }
+
+    /* worm hiding / showing */
+    .worm.hidden {
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+    }
+
+    /* little instruction tip (non intrusive) */
+    .info-tip {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: #eeddbbd9;
+      backdrop-filter: blur(6px);
+      padding: 14px 22px;
+      border-radius: 60px;
+      font-size: 1.2rem;
+      border: 2px solid #9b7e5a;
+      color: #2c3e1f;
+      box-shadow: 0 10px 18px #00000033;
+      z-index: 100;
+      font-weight: 500;
+      pointer-events: none;
+      border-left: 12px solid #6aa86a;
+    }
+
+    /* small touch: pebbles */
+    .tiny-pebble {
+      position: absolute;
+      background: #7f6e5b;
+      border-radius: 40%;
+      width: 8px;
+      height: 5px;
+      z-index: 3;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="world" id="worldContainer">
+    <!-- all dynamic elements will be injected via js -->
+  </div>
+
+  <div class="info-tip">
+    🌿 छुओ और मज़ा करो:<br>
+    🪰 मक्खी → उड़ जाएगी<br>
+    🐜 चींटी → गुस्सा होगी<br>
+    🪱 केंचुआ → छुप जाएगा (फिर आएगा)<br>
+    💧 पानी पर हाथ फेरो → हिलेगा
+  </div>
+
+  <script>
+    (function() {
+      const world = document.getElementById('worldContainer');
+      // fixed world size 2200x2200
+      const WORLD_W = 2200;
+      const WORLD_H = 2200;
+
+      // ----- helper random range -----
+      const rand = (min, max) => Math.random() * (max - min) + min;
+      const randInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+
+      // -------------------- 1. GRASS (many blades) --------------------
+      for (let i = 0; i < 140; i++) {
+        const grass = document.createElement('div');
+        grass.className = 'grass-blade';
+        const left = rand(10, WORLD_W - 20);
+        const top = rand(10, WORLD_H - 30);
+        grass.style.left = left + 'px';
+        grass.style.top = top + 'px';
+        const rot = rand(-25, 35);
+        grass.style.transform = `rotate(${rot}deg) scaleY(${rand(0.9, 1.4)})`;
+        // vary green tone
+        const g = randInt(90, 180);
+        grass.style.background = `linear-gradient(45deg, #2b7a2b, #${g.toString(16)}a${g.toString(16)}a, #1c5a1c)`;
+        world.appendChild(grass);
+      }
+
+      // -------------------- 2. STONES (chote chote) --------------------
+      for (let i = 0; i < 35; i++) {
+        const stone = document.createElement('div');
+        stone.className = 'stone';
+        const size = rand(12, 45);
+        stone.style.width = size + 'px';
+        stone.style.height = size * rand(0.6, 1.0) + 'px';
+        stone.style.left = rand(0, WORLD_W - size) + 'px';
+        stone.style.top = rand(0, WORLD_H - size) + 'px';
+        stone.style.borderRadius = `${rand(30, 70)}% ${rand(20, 60)}% ${rand(40, 80)}% ${rand(20, 50)}%`;
+        world.appendChild(stone);
+      }
+
+      // tiny pebbles (extra realistic)
+      for (let i = 0; i < 60; i++) {
+        const peb = document.createElement('div');
+        peb.className = 'tiny-pebble';
+        peb.style.width = rand(4, 10) + 'px';
+        peb.style.height = rand(2, 6) + 'px';
+        peb.style.left = rand(0, WORLD_W) + 'px';
+        peb.style.top = rand(0, WORLD_H) + 'px';
+        peb.style.background = `#${randInt(60,90).toString(16)}${randInt(50,70).toString(16)}40`;
+        world.appendChild(peb);
+      }
+
+      // -------------------- 3. LEAVES (ped ke patte, alag alag) --------------------
+      const leafColors = ['#8b5e3c', '#b78f5a', '#6d4f2b', '#9c7a4b', '#7c5e3a', '#a57148', '#5e4022', '#c19a6b'];
+      for (let i = 0; i < 40; i++) {
+        const leaf = document.createElement('div');
+        leaf.className = 'leaf';
+        const w = rand(15, 38);
+        const h = rand(12, 30);
+        leaf.style.width = w + 'px';
+        leaf.style.height = h + 'px';
+        leaf.style.left = rand(10, WORLD_W - w - 10) + 'px';
+        leaf.style.top = rand(10, WORLD_H - h - 10) + 'px';
+        leaf.style.transform = `rotate(${rand(0, 360)}deg)`;
+        leaf.style.background = leafColors[randInt(0, leafColors.length-1)];
+        leaf.style.opacity = rand(0.7, 1);
+        world.appendChild(leaf);
+      }
+
+      // -------------------- 4. WATER (2 puddles) + ripple effect --------------------
+      function createWaterPuddle(left, top, w, h) {
+        const water = document.createElement('div');
+        water.className = 'water';
+        water.style.left = left + 'px';
+        water.style.top = top + 'px';
+        water.style.width = w + 'px';
+        water.style.height = h + 'px';
+        world.appendChild(water);
+
+        // add ripple on touch / mouse move over this puddle
+        const addRipple = (e) => {
+          e.preventDefault();  // avoid pull-to-refresh on mobile
+          water.classList.add('ripple');
+          setTimeout(() => {
+            water.classList.remove('ripple');
+          }, 500);
+        };
+
+        water.addEventListener('mousemove', addRipple);
+        water.addEventListener('touchmove', addRipple, { passive: false });
+        water.addEventListener('touchstart', addRipple, { passive: false }); // for quick finger tap
+      }
+
+      // puddle 1
+      createWaterPuddle(450, 1220, 240, 120);
+      // puddle 2 (another spot)
+      createWaterPuddle(1650, 700, 320, 140);
+      // extra tiny damp spot
+      const water3 = document.createElement('div');
+      water3.className = 'water';
+      water3.style.left = '980px'; water3.style.top = '380px';
+      water3.style.width = '130px'; water3.style.height = '70px';
+      water3.style.background = 'radial-gradient(circle at 40% 60%, rgba(70, 180, 240, 0.5), rgba(10, 80, 180, 0.35))';
+      world.appendChild(water3);
+      water3.addEventListener('mousemove', (e) => { e.preventDefault(); water3.classList.add('ripple'); setTimeout(() => water3.classList.remove('ripple'), 500); });
+      water3.addEventListener('touchmove', (e) => { e.preventDefault(); water3.classList.add('ripple'); setTimeout(() => water3.classList.remove('ripple'), 500); }, { passive: false });
+      water3.addEventListener('touchstart', (e) => { e.preventDefault(); water3.classList.add('ripple'); setTimeout(() => water3.classList.remove('ripple'), 500); }, { passive: false });
+
+      // -------------------- 5. INSECTS (flies, ants, earthworms) with holes for worms --------------------
+      
+      // ---- FLIES (makkhi) ----
+      const flyPositions = [
+        [300, 500], [1200, 300], [800, 1700], [1900, 1300], [400, 1900]
+      ];
+      flyPositions.forEach((pos, index) => {
+        const fly = document.createElement('div');
+        fly.className = 'insect fly';
+        fly.innerHTML = '🪰';  // fly emoji
+        fly.style.left = pos[0] + 'px';
+        fly.style.top = pos[1] + 'px';
+        fly.dataset.type = 'fly';
+        world.appendChild(fly);
+
+        // fly away on click
+        fly.addEventListener('click', (e) => {
+          e.stopPropagation();
+          // move to random location inside world
+          const newX = rand(30, WORLD_W - 80);
+          const newY = rand(30, WORLD_H - 80);
+          fly.style.transition = 'left 0.3s, top 0.3s';
+          fly.style.left = newX + 'px';
+          fly.style.top = newY + 'px';
+          // little buzz animation
+          fly.style.transform = 'scale(1.2) rotate(5deg)';
+          setTimeout(() => fly.style.transform = 'scale(1) rotate(0deg)', 150);
+        });
+      });
+
+      // ---- ANTS (chinti) ----
+      const antPositions = [
+        [550, 800], [1400, 200], [300, 1400], [1750, 1550], [950, 500], [2020, 1800]
+      ];
+      antPositions.forEach((pos, index) => {
+        const ant = document.createElement('div');
+        ant.className = 'insect ant';
+        ant.innerHTML = '🐜';
+        ant.style.left = pos[0] + 'px';
+        ant.style.top = pos[1] + 'px';
+        ant.dataset.type = 'ant';
+        world.appendChild(ant);
+
+        let angerTimeout = null;
+        ant.addEventListener('click', (e) => {
+          e.stopPropagation();
+          // gussa ho jaye
+          ant.classList.add('angry');
+          if (angerTimeout) clearTimeout(angerTimeout);
+          angerTimeout = setTimeout(() => {
+            ant.classList.remove('angry');
+          }, 1800); // 1.8 sec gussa
+        });
+      });
+
+      // ---- EARTHWORMS (kechhuva) with holes nearby ----
+      const wormPositions = [
+        [220, 1020], [1350, 1850], [700, 350], [1850, 420]
+      ];
+      
+      // store worm timeouts to manage reappear
+      wormPositions.forEach((pos, idx) => {
+        // create a hole first (earth hole)
+        const hole = document.createElement('div');
+        hole.className = 'worm-hole';
+        hole.style.left = (pos[0] - 10) + 'px';
+        hole.style.top = (pos[1] + 10) + 'px';
+        hole.style.width = rand(35, 50) + 'px';
+        hole.style.height = rand(10, 22) + 'px';
+        world.appendChild(hole);
+
+        // the worm itself
+        const worm = document.createElement('div');
+        worm.className = 'insect worm';
+        worm.innerHTML = '🪱';
+        worm.style.left = pos[0] + 'px';
+        worm.style.top = pos[1] + 'px';
+        worm.dataset.type = 'worm';
+        world.appendChild(worm);
+
+        let hideTimeout = null;
+        let reappearTimer = null;
+
+        const hideWorm = () => {
+          worm.classList.add('hidden');
+          // after 2.5 sec reappear
+          if (reappearTimer) clearTimeout(reappearTimer);
+          reappearTimer = setTimeout(() => {
+            worm.classList.remove('hidden');
+            // wiggle out animation
+            worm.style.transform = 'translateY(-6px) scale(1.1)';
+            setTimeout(() => worm.style.transform = 'none', 250);
+          }, 2500);
+        };
+
+        worm.addEventListener('click', (e) => {
+          e.stopPropagation();
+          // pehle se hide ho to kuch mat kar? but we hide again
+          if (!worm.classList.contains('hidden')) {
+            hideWorm();
+          } else {
+            // if hidden, maybe force reappear? but we respect timer.
+            // but we can cancel and reappear now? better just ignore.
+          }
+        });
+
+        // also touch (same handler)
+        worm.addEventListener('touchstart', (e) => {
+          e.preventDefault();
+          if (!worm.classList.contains('hidden')) {
+            hideWorm();
+          }
+        }, { passive: false });
+      });
+
+      // add a couple extra flies/worms for more fun
+      const extraFly = document.createElement('div');
+      extraFly.className = 'insect fly';
+      extraFly.innerHTML = '🪰';
+      extraFly.style.left = '1100px'; extraFly.style.top = '930px';
+      world.appendChild(extraFly);
+      extraFly.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const newX = rand(30, WORLD_W - 80);
+        const newY = rand(30, WORLD_H - 80);
+        extraFly.style.transition = 'left 0.3s, top 0.3s';
+        extraFly.style.left = newX + 'px';
+        extraFly.style.top = newY + 'px';
+        extraFly.style.transform = 'scale(1.3) rotate(8deg)';
+        setTimeout(() => extraFly.style.transform = 'scale(1) rotate(0deg)', 170);
+      });
+
+      // also one more ant with personality
+      const extraAnt = document.createElement('div');
+      extraAnt.className = 'insect ant';
+      extraAnt.innerHTML = '🐜';
+      extraAnt.style.left = '1620px'; extraAnt.style.top = '1210px';
+      world.appendChild(extraAnt);
+      let antTimer2;
+      extraAnt.addEventListener('click', (e) => {
+        e.stopPropagation();
+        extraAnt.classList.add('angry');
+        if (antTimer2) clearTimeout(antTimer2);
+        antTimer2 = setTimeout(() => extraAnt.classList.remove('angry'), 1700);
+      });
+
+      // final touch: some fallen small twigs (optional extra)
+      for (let i=0; i<8; i++) {
+        const twig = document.createElement('div');
+        twig.style.position = 'absolute';
+        twig.style.background = '#6b4f32';
+        twig.style.width = rand(20,45)+'px';
+        twig.style.height = '3px';
+        twig.style.borderRadius = '40%';
+        twig.style.left = rand(0,WORLD_W)+'px';
+        twig.style.top = rand(0,WORLD_H)+'px';
+        twig.style.transform = `rotate(${rand(0,180)}deg)`;
+        twig.style.boxShadow = '0 3px 5px #2f261b';
+        twig.style.zIndex = '4';
+        twig.style.pointerEvents = 'none';
+        world.appendChild(twig);
+      }
+
+      // ensure the world is fully scrollable (already by overflow)
+      // Also, we can add a few extra grass near edges
+      console.log('Nature scene ready — scroll और मज़ा लो!');
+    })();
+  </script>
+</body>
+</html>
